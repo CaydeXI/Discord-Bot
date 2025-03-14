@@ -14,6 +14,7 @@ load_dotenv()
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+intents.guilds = True
 
 client = commands.Bot(command_prefix = '+', intents = intents)
 
@@ -30,17 +31,38 @@ async def on_ready():
 async def test(ctx):
     user_id = str(ctx.author)
     print(user_id)
+    print(os.getenv("SIONARA"))
     await ctx.send("**# " + user_id + "** testing testing")
 
 
 
 '''--------------------------------------------------------------------------------------------------------------------------------
-                        Supposed to send a message whenever someone leaves the server
+                                       Act like an angel and dress like crazy
 --------------------------------------------------------------------------------------------------------------------------------'''
 @client.event
+async def on_message(message):
+    if message.content == "crazy":
+        await message.delete()
+        await message.channel.send("No no")
+
+'''--------------------------------------------------------------------------------------------------------------------------------
+                        Supposed to send a message whenever someone leaves the server
+--------------------------------------------------------------------------------------------------------------------------------'''
+'''LEAVE_CHANNEL = os.getenv("SIONARA")
+
+@client.event
 async def on_member_remove(member):
-    channel = client.get_channel(728631905330790431)
-    await channel.send("user has left the server")
+    channel = client.get_channel(LEAVE_CHANNEL)
+    guild = member.guild
+    #audit_logs = guild.audit_logs(limit = 1, action = discord.AuditLogAction.kick)
+
+    # Fetch the latest audit log entry for kicks
+    async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.kick):
+        print(entry)
+        if entry.target == member:  # Ensure the log entry matches the member that left
+            message = f"**{member.name}** just left the server."
+            
+    await channel.send(message)'''
 
 '''--------------------------------------------------------------------------------------------------------------------------------
                                                   Join/Leave voice calls
@@ -65,5 +87,4 @@ async def leave(ctx):
                                                     Runs the pookie bot
 --------------------------------------------------------------------------------------------------------------------------------'''
 TOKEN = os.getenv('POOKIE_BOT_TOKEN')
-print(os.getenv("POOKIE_BOT_TOKEN"))
 client.run(TOKEN)
