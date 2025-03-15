@@ -33,7 +33,15 @@ async def test(ctx):
     print(user_id)
     await ctx.send("**# " + user_id + "** testing testing")
 
-
+'''--------------------------------------------------------------------------------------------------------------------------------
+                                    Act like and angel and dress like crazy
+--------------------------------------------------------------------------------------------------------------------------------'''
+@client.event
+async def on_message(message):
+    await client.process_commands(message)
+    
+    if "crazy" in message.content:
+        await message.channel.send("no no")
 
 '''--------------------------------------------------------------------------------------------------------------------------------
                         Supposed to send a message whenever someone leaves the server
