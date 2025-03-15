@@ -14,6 +14,7 @@ load_dotenv()
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+intents.guilds = True
 
 client = commands.Bot(command_prefix = '+', intents = intents)
 
@@ -32,15 +33,34 @@ async def test(ctx):
     print(user_id)
     await ctx.send("**# " + user_id + "** testing testing")
 
-
+'''--------------------------------------------------------------------------------------------------------------------------------
+                                    Act like and angel and dress like crazy
+--------------------------------------------------------------------------------------------------------------------------------'''
+@client.event
+async def on_message(message):
+    await client.process_commands(message)
+    
+    if "crazy" in message.content:
+        await message.channel.send("no no")
 
 '''--------------------------------------------------------------------------------------------------------------------------------
                         Supposed to send a message whenever someone leaves the server
 --------------------------------------------------------------------------------------------------------------------------------'''
+LEAVE_CHANNEL = int(os.getenv("SIONARA"))
+
 @client.event
 async def on_member_remove(member):
-    channel = client.get_channel(728631905330790431)
-    await channel.send("user has left the server")
+    channel = client.get_channel(LEAVE_CHANNEL)
+    guild = member.guild
+    #audit_logs = guild.audit_logs(limit = 1, action = discord.AuditLogAction.kick)
+
+    # Fetch the latest audit log entry for kicks
+    async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.kick):
+        print(entry)
+        if entry.target == member:  # Ensure the log entry matches the member that left
+            message = f"**{member.nick}** just left the server."
+            
+    await channel.send(message)
 
 '''--------------------------------------------------------------------------------------------------------------------------------
                                                   Join/Leave voice calls
@@ -65,5 +85,4 @@ async def leave(ctx):
                                                     Runs the pookie bot
 --------------------------------------------------------------------------------------------------------------------------------'''
 TOKEN = os.getenv('POOKIE_BOT_TOKEN')
-print(os.getenv("POOKIE_BOT_TOKEN"))
 client.run(TOKEN)
