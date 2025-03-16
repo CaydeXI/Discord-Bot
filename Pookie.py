@@ -4,6 +4,7 @@ from discord.ext import commands
 
 # Load the environment files
 import os
+import requests
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -52,7 +53,6 @@ LEAVE_CHANNEL = int(os.getenv("SIONARA"))
 async def on_member_remove(member):
     channel = client.get_channel(LEAVE_CHANNEL)
     guild = member.guild
-    #audit_logs = guild.audit_logs(limit = 1, action = discord.AuditLogAction.kick)
 
     # Fetch the latest audit log entry for kicks
     async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.kick):
@@ -80,6 +80,49 @@ async def leave(ctx):
         await ctx.send("Left voice channel")
     else:
         await ctx.send("Not currently in a voice channel")
+
+'''--------------------------------------------------------------------------------------------------------------------------------
+                                                  Embeds stuff
+--------------------------------------------------------------------------------------------------------------------------------'''
+@client.command()
+async def embed(ctx):
+    embed = discord.Embed(
+        title = "Dog", 
+        url = "https://google.com", 
+        description = "We love dogs!", 
+        color = 0x4dff4d)
+    embed.set_author(name = "James S", url = "https://google.com")
+    await ctx.send(embed = embed)
+
+'''--------------------------------------------------------------------------------------------------------------------------------
+                                                  Riot games stuff
+--------------------------------------------------------------------------------------------------------------------------------'''
+# Initialize both of these beforehand because I know I'm going to need them later
+RIOT_ACCOUNT_URL = "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id"
+RIOT_API_KEY = os.getenv("RIOT_API_KEY")
+
+def get_riot_puuid(summoner_name, message: str):
+    riot_id = message.split('#')[0]
+    tagline = message.split('#')[1]
+    url = f"{RIOT_ACCOUNT_URL}/{riot_id}/{tagline}"
+    headers = {"X-Riot-Token": RIOT_API_KEY}
+    response = requests.get(url, headers = headers)
+
+    # Status code 200 means all is good, anything not 200 is bad
+    if response.status_code == 200:
+        return response.json()    # returns puuid
+    else:
+        return None
+
+RIOT_SUMMONER_URL = "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid"
+@client.command()
+async def get_summoner_data(puuid):
+    url = f"{RIOT_SUMMONER_URL}/{puuid}"
+    print(url)
+    headers = {"X-Riot-Token": RIOT_API_KEY}
+    response = requests.get(url, headers = headers)
+
+    print(response.json())
 
 '''--------------------------------------------------------------------------------------------------------------------------------
                                                     Runs the pookie bot
