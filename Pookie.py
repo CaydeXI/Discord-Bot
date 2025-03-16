@@ -101,7 +101,9 @@ async def embed(ctx):
 RIOT_ACCOUNT_URL = "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id"
 RIOT_API_KEY = os.getenv("RIOT_API_KEY")
 
-def get_riot_puuid(summoner_name, message: str):
+# This function takes in the summoner name and tagline and gets their PUUID from the Riot API
+@client.command()
+async def get_riot_puuid(message):
     riot_id = message.split('#')[0]
     tagline = message.split('#')[1]
     url = f"{RIOT_ACCOUNT_URL}/{riot_id}/{tagline}"
@@ -110,19 +112,99 @@ def get_riot_puuid(summoner_name, message: str):
 
     # Status code 200 means all is good, anything not 200 is bad
     if response.status_code == 200:
-        return response.json()    # returns puuid
+        return response.json()["puuid"]    # returns puuid
     else:
         return None
 
 RIOT_SUMMONER_URL = "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid"
-@client.command()
-async def get_summoner_data(puuid):
+
+# This function takes the PUUID obtained from the 
+def get_summoner_data(puuid):
     url = f"{RIOT_SUMMONER_URL}/{puuid}"
-    print(url)
     headers = {"X-Riot-Token": RIOT_API_KEY}
     response = requests.get(url, headers = headers)
 
-    print(response.json())
+    '''{ This is the response from my account with sensitive information removed
+        "id": "",
+        "accountId": "",
+        "puuid": "",
+        "profileIconId": 6555,
+        "revisionDate": 1741828142000,
+        "summonerLevel": 547
+    }'''
+
+    if response.status_code == 200:
+        return response.json()    # Still deciding what to actually return from this query
+    else:
+        return None
+    
+RIOT_LEAGUE_URL = "https://na1.api.riotgames.com/lol/league/v4/entries/by-puuid"
+
+def get_ranked_stats(puuid):
+    url = f"{RIOT_LEAGUE_URL}/{puuid}"
+    headers = {"X-Riot-Token": RIOT_API_KEY}
+    response = requests.get(url, headers = headers)
+
+    '''{ This is the response from my account with the sensitive information removed
+        "leagueId": "",
+        "queueType": "RANKED_SOLO_5x5",
+        "tier": "PLATINUM",
+        "rank": "I",
+        "summonerId": "",
+        "puuid": "",
+        "leaguePoints": 56,
+        "wins": 10,
+        "losses": 3,
+        "veteran": false,
+        "inactive": false,
+        "freshBlood": false,
+        "hotStreak": false
+    }'''
+
+    if response.status_code == 200:
+        return response.json()    # Probably want to obtain the tier, rank, and leaguePoints from the query
+    else:
+        return None
+
+RIOT_CHAMP_MASTERY_URL = "https://na1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid"
+
+def get_most_played_champions(puuid):
+    url = f"{RIOT_CHAMP_MASTERY_URL}/{puuid}"
+    headers = {"X-Riot-Token": RIOT_API_KEY}
+    response = requests.get(url, headers = headers)
+
+    '''{ This is the response from my account with the sensitive information removed
+    "puuid": "",
+    "championId": 50,
+    "championLevel": 16,
+    "championPoints": 144476,
+    "lastPlayTime": 1737675256000,
+    "championPointsSinceLastLevel": 2876,
+    "championPointsUntilNextLevel": 8124,
+    "markRequiredForNextLevel": 2,
+    "tokensEarned": 4,
+    "championSeasonMilestone": 0,
+    "nextSeasonMilestone": {
+        "requireGradeCounts": {
+            "A-": 1
+        },
+        "rewardMarks": 1,
+        "bonus": false,
+        "totalGamesRequires": 1
+    }'''
+
+    if response.status_code == 200:
+        return response.json()    # Probably will use the championId, championLevel, and championPoints from this query
+    else:
+        return None
+
+@client.command()
+async def stats(summoner_id, message: str):
+    print(message)
+    puuid = await get_riot_puuid(message)    #Works properly
+    #summoner_data = await get_summoner_data(puuid)
+    #rank_stats = await get_ranked_stats(puuid)
+    #champs = await get_most_played_champions(puuid)
 
 '''--------------------------------------------------------------------------------------------------------------------------------
                                                     Runs the pookie bot
