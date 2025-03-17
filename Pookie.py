@@ -51,6 +51,7 @@ async def on_message(message):
 '''--------------------------------------------------------------------------------------------------------------------------------
                         Supposed to send a message whenever someone leaves the server
 --------------------------------------------------------------------------------------------------------------------------------'''
+# This leave channel should be changed to the appropriate channel in the server
 LEAVE_CHANNEL = int(os.getenv("SIONARA"))
 
 @client.event
@@ -99,7 +100,7 @@ async def embed(ctx):
     await ctx.send(embed = embed)
 
 '''--------------------------------------------------------------------------------------------------------------------------------
-                                                  Riot games stuff
+                                            Riot games stats command
 --------------------------------------------------------------------------------------------------------------------------------'''
 # Initialize both of these beforehand because I know I'm going to need them later
 RIOT_ACCOUNT_URL = "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id"
@@ -180,12 +181,15 @@ def get_ranked_stats(puuid):
             lp = 0
             win_rate = 0
         else:
-            tier = response.json()[0]["tier"]
-            rank = response.json()[0]["rank"]
-            lp = response.json()[0]["leaguePoints"]
-            wins = response.json()[0]["wins"]
-            losses = response.json()[0]["losses"]
-            win_rate = int( 100 * ( wins / ( wins + losses )))
+            for x in range (len(response.json())):
+                if response.json()[x].get("queueType") == "RANKED_SOLO_5x5":
+                    tier = response.json()[x]["tier"]
+                    rank = response.json()[x]["rank"]
+                    lp = response.json()[x]["leaguePoints"]
+                    wins = response.json()[x]["wins"]
+                    losses = response.json()[x]["losses"]
+                    win_rate = int( 100 * ( wins / ( wins + losses )))
+                    
 
         return  tier, rank, lp, win_rate
     else:
@@ -225,12 +229,13 @@ def get_most_played_champions(puuid):
         champlevel = []
         champpoints = []
         for x in range (5):
-            champ.append(LeagueChamps.get(f"{response.json()[x].get("championId")}"))
+            champ.append(LeagueChamps.get(f"{response.json()[x].get("championId")}").get("name"))
             champlevel.append(response.json()[x].get("championLevel"))
             champpoints.append(response.json()[x].get("championPoints"))
         
-        
-        return champ, champlevel, champpoints
+        champ_url = get_champ_splash(response.json()[0].get("championId"))
+
+        return champ, champlevel, champpoints, champ_url
     else:
         print(f"Failed to get champion mastery. Error code: {response.status_code}")
         return None
@@ -258,6 +263,17 @@ def get_icon_data(icon_id):
         print(f"Failed to get icon data: Error code: {response.status_code}")
         return None
 
+def get_champ_splash(champ_id):
+    champ_splash = LeagueChamps.get(f"{champ_id}").get("key")
+    url = f"https://ddragon.leagueoflegends.com/cdn/img/champion/splash/{champ_splash}_0.jpg"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        return url
+    else:
+        print(f"Failed to get champion splash: Error code: {response.status_code}")
+        return None
+
 @client.command()
 async def stats(ctx, *, summoner_name: str):
     puuid, opgg = get_riot_puuid(summoner_name)    #Works properly
@@ -271,7 +287,11 @@ async def stats(ctx, *, summoner_name: str):
     icon_data = get_icon_data(profile_icon_id)
     icon_url = f"https://ddragon.leagueoflegends.com/cdn/15.5.1/img/profileicon/{profile_icon_id}.png"
 
-    champs, champlevels, champpoints = get_most_played_champions(puuid)
+    champs, champlevels, champpoints, champ_url = get_most_played_champions(puuid)
+
+    
+
+    get_match_history(puuid)
     #print(f"{champs}\n{champlevels}\n{champpoints}")
 
     '''embed = discord.Embed(
@@ -301,8 +321,24 @@ async def stats(ctx, *, summoner_name: str):
                 f"5. {champs[4]}, Level {champlevels[4]},\n {champpoints[4]} Mastery\n",
 
         inline = True)
+    embed.set_image(url = champ_url)
     
     await ctx.send(embed = embed)
+
+'''--------------------------------------------------------------------------------------------------------------------------------
+                                            Riot games match history commands
+--------------------------------------------------------------------------------------------------------------------------------'''
+def get_match_history(puuid):
+    url = f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=5"
+    headers = {"X-Riot-Token": RIOT_API_KEY}
+    response = requests.get(url, headers = headers)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Failed to get match history. Error code: {response.status_code}")
+        return None
+
 
 
 '''--------------------------------------------------------------------------------------------------------------------------------
