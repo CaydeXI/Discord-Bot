@@ -118,7 +118,7 @@ async def get_riot_puuid(message):
 
 RIOT_SUMMONER_URL = "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid"
 
-# This function takes the PUUID obtained from the 
+# This function takes the PUUID obtained from the first function and returns summoner data
 def get_summoner_data(puuid):
     url = f"{RIOT_SUMMONER_URL}/{puuid}"
     headers = {"X-Riot-Token": RIOT_API_KEY}
@@ -140,6 +140,7 @@ def get_summoner_data(puuid):
     
 RIOT_LEAGUE_URL = "https://na1.api.riotgames.com/lol/league/v4/entries/by-puuid"
 
+# This functions returns info about player's ranked statistics
 def get_ranked_stats(puuid):
     url = f"{RIOT_LEAGUE_URL}/{puuid}"
     headers = {"X-Riot-Token": RIOT_API_KEY}
@@ -162,12 +163,13 @@ def get_ranked_stats(puuid):
     }'''
 
     if response.status_code == 200:
-        return response.json()    # Probably want to obtain the tier, rank, and leaguePoints from the query
+        return response.json()    # Returns a list with one entry (the json file) 
     else:
         return None
 
 RIOT_CHAMP_MASTERY_URL = "https://na1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid"
 
+# This function returns the player's most played champions in descending order
 def get_most_played_champions(puuid):
     url = f"{RIOT_CHAMP_MASTERY_URL}/{puuid}"
     headers = {"X-Riot-Token": RIOT_API_KEY}
@@ -200,11 +202,26 @@ def get_most_played_champions(puuid):
 
 @client.command()
 async def stats(summoner_id, message: str):
-    print(message)
     puuid = await get_riot_puuid(message)    #Works properly
-    #summoner_data = await get_summoner_data(puuid)
-    #rank_stats = await get_ranked_stats(puuid)
-    #champs = await get_most_played_champions(puuid)
+
+    summoner_data = get_summoner_data(puuid)
+    profile_icon = summoner_data["profileIconId"]
+    summoner_level = summoner_data["summonerLevel"]
+    #print(f"{profile_icon}/{summoner_level}")
+
+    rank_stats = get_ranked_stats(puuid)[0]
+    tier = rank_stats["tier"]
+    rank = rank_stats["rank"]
+    lp = rank_stats["leaguePoints"]
+    wins = rank_stats["wins"]
+    losses = rank_stats["losses"]
+    win_rate = int( 100 * ( wins / ( wins + losses )))
+    #print(f"{tier}/{rank}/{lp}/{win_rate}")
+
+    champs = get_most_played_champions(puuid)
+    '''for x in range (0, 4):
+        champ = champs[x]'''
+
 
 '''--------------------------------------------------------------------------------------------------------------------------------
                                                     Runs the pookie bot
