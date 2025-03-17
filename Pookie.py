@@ -285,20 +285,20 @@ async def stats(ctx, *, summoner_name: str):
     embed = discord.Embed(
         title = summoner_name.split("#")[0],
         url = opgg,
-        description = f"{champs[0]} lover",
+        description = f"{champs[0]} lover\n Level {summoner_level}",
         color = 0x4dff4d)
     embed.set_thumbnail(url = icon_url)
     embed.add_field(
         name = "Ranked stats",
-        value = f"{tier} {rank} {lp} LP\n {win_rate}% Win Rate",
+        value = f"{tier} {rank}\n {lp} LP\n {win_rate}% Win Rate",
         inline = True)
     embed.add_field(
         name = "Most Played Champions",
-        value = f"1. {champs[0]}, Level {champlevels[0]}, {champpoints[0]} Mastery\n" +
-                f"2. {champs[1]}, Level {champlevels[1]}, {champpoints[1]} Mastery\n" +
-                f"3. {champs[2]}, Level {champlevels[2]}, {champpoints[2]} Mastery\n" +
-                f"4. {champs[3]}, Level {champlevels[3]}, {champpoints[3]} Mastery\n" +
-                f"5. {champs[4]}, Level {champlevels[4]}, {champpoints[4]} Mastery\n",
+        value = f"1. {champs[0]}, Level {champlevels[0]},\n {champpoints[0]} Mastery\n" +
+                f"2. {champs[1]}, Level {champlevels[1]},\n {champpoints[1]} Mastery\n" +
+                f"3. {champs[2]}, Level {champlevels[2]},\n {champpoints[2]} Mastery\n" +
+                f"4. {champs[3]}, Level {champlevels[3]},\n {champpoints[3]} Mastery\n" +
+                f"5. {champs[4]}, Level {champlevels[4]},\n {champpoints[4]} Mastery\n",
 
         inline = True)
     
