@@ -271,6 +271,7 @@ def get_champ_splash(champ_id):
 async def stats(ctx, *, summoner_name: str):
     if Accounts.get(summoner_name):
         puuid, opgg = get_riot_puuid(Accounts.get(summoner_name))    #Works properly
+        summoner_name = Accounts.get(summoner_name)
     else:
         puuid, opgg = get_riot_puuid(summoner_name) 
 
@@ -360,6 +361,21 @@ async def remove(ctx, *, name):
         await ctx.send("Successfully removed the nickname")
     else:
         await ctx.send("That nickname was not found in the database")
+
+@client.command()
+async def list(ctx):
+    embed = discord.Embed(
+        title = "List of saved nicknames",
+        color = 0x4dff4d)
+    embed.set_thumbnail(url = "https://cdn.discordapp.com/attachments/868495107274448926/1351310309981421668/league_logo.jpg?ex=67d9e94c&is=67d897cc&hm=9f135b05c908e440e54c63154094eca2ca270749b9f9df41bb267c7fbf510fdf&")
+    for nickname in Accounts:
+        embed.add_field(
+            name = f"{nickname} : {Accounts[nickname]}",
+            value = "",
+            inline = False
+        )
+    
+    await ctx.send(embed = embed)
 
 '''--------------------------------------------------------------------------------------------------------------------------------
                                                     Runs the pookie bot
