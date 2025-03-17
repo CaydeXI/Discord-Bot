@@ -102,8 +102,8 @@ RIOT_ACCOUNT_URL = "https://americas.api.riotgames.com/riot/account/v1/accounts/
 RIOT_API_KEY = os.getenv("RIOT_API_KEY")
 
 # This function takes in the summoner name and tagline and gets their PUUID from the Riot API
-@client.command()
-async def get_riot_puuid(message):
+
+def get_riot_puuid(message):
     riot_id = message.split('#')[0]
     tagline = message.split('#')[1]
     url = f"{RIOT_ACCOUNT_URL}/{riot_id}/{tagline}"
@@ -114,6 +114,7 @@ async def get_riot_puuid(message):
     if response.status_code == 200:
         return response.json()["puuid"]    # returns puuid
     else:
+        print(f"Failed to get Riot puuid. Error code: {response.status_code}")
         return None
 
 RIOT_SUMMONER_URL = "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid"
@@ -134,8 +135,11 @@ def get_summoner_data(puuid):
     }'''
 
     if response.status_code == 200:
-        return response.json()    # Still deciding what to actually return from this query
+        profile_icon = response.json()["profileIconId"]
+        summoner_level = response.json()["summonerLevel"]
+        return profile_icon, summoner_level
     else:
+        print(f"Failed to get summoner data. Error code: {response.status_code}")
         return None
     
 RIOT_LEAGUE_URL = "https://na1.api.riotgames.com/lol/league/v4/entries/by-puuid"
@@ -163,8 +167,15 @@ def get_ranked_stats(puuid):
     }'''
 
     if response.status_code == 200:
-        return response.json()    # Returns a list with one entry (the json file) 
+        tier = response.json()[0]["tier"]
+        rank = response.json()[0]["rank"]
+        lp = response.json()[0]["leaguePoints"]
+        wins = response.json()[0]["wins"]
+        losses = response.json()[0]["losses"]
+        win_rate = int( 100 * ( wins / ( wins + losses )))
+        return  tier, rank, lp, win_rate
     else:
+        print(f"Failed to get ranked statistics. Error code: {response.status_code}")
         return None
 
 RIOT_CHAMP_MASTERY_URL = "https://na1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid"
@@ -198,25 +209,44 @@ def get_most_played_champions(puuid):
     if response.status_code == 200:
         return response.json()    # Probably will use the championId, championLevel, and championPoints from this query
     else:
+        print(f"Failed to get champion mastery. Error code: {response.status_code}")
+        return None
+
+# This function get the current game version 
+def get_patch_version():
+    url = "https://ddragon.leagueoflegends.com/api/versions.json"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        return response.json()[0]
+    else:
+        print(f"Failed to get patch version: Error code: {response.status_code}")
+        return None
+
+# This function accesses the official League icon repository to get a specific icon
+def get_icon_data(icon_id):
+    patch_version = get_patch_version()
+    url = f"https://ddragon.leagueoflegends.com/cdn/{patch_version}/data/en_US/profileicon.json"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        return response.json().get("data").get(f"{icon_id}").get("image").get("sprite")
+    else:
+        print(f"Failed to get icon data: Error code: {response.status_code}")
         return None
 
 @client.command()
 async def stats(summoner_id, message: str):
-    puuid = await get_riot_puuid(message)    #Works properly
+    puuid = get_riot_puuid(message)    #Works properly
 
-    summoner_data = get_summoner_data(puuid)
-    profile_icon = summoner_data["profileIconId"]
-    summoner_level = summoner_data["summonerLevel"]
-    #print(f"{profile_icon}/{summoner_level}")
+    profile_icon_id, summoner_level = get_summoner_data(puuid)
+    #print(f"{profile_icon_id}/{summoner_level}")
 
-    rank_stats = get_ranked_stats(puuid)[0]
-    tier = rank_stats["tier"]
-    rank = rank_stats["rank"]
-    lp = rank_stats["leaguePoints"]
-    wins = rank_stats["wins"]
-    losses = rank_stats["losses"]
-    win_rate = int( 100 * ( wins / ( wins + losses )))
+    tier, rank, lp, win_rate = get_ranked_stats(puuid)
     #print(f"{tier}/{rank}/{lp}/{win_rate}")
+
+    icon_data = get_icon_data(profile_icon_id)
+    print(icon_data)
 
     champs = get_most_played_champions(puuid)
     '''for x in range (0, 4):
