@@ -1,4 +1,4 @@
-#Import Discord API
+# Import Discord API
 import discord
 from discord.ext import commands
 
@@ -7,6 +7,11 @@ import os
 import requests
 from dotenv import load_dotenv
 load_dotenv()
+
+# Imports a json that conveniently contains all of the Leageu champions with their champion ids
+import json
+with open('LeagueChamps.json') as fp:
+    LeagueChamps = json.load(fp)
 
 # Perhaps not needed for actual function of bot, just for videos
 #import requests
@@ -31,7 +36,6 @@ async def on_ready():
 @client.command()
 async def test(ctx):
     user_id = str(ctx.author)
-    print(user_id)
     await ctx.send("**# " + user_id + "** testing testing")
 
 '''--------------------------------------------------------------------------------------------------------------------------------
@@ -56,7 +60,7 @@ async def on_member_remove(member):
 
     # Fetch the latest audit log entry for kicks
     async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.kick):
-        print(entry)
+        #print(entry)
         if entry.target == member:  # Ensure the log entry matches the member that left
             message = f"**{member.nick}** just left the server."
             
@@ -104,15 +108,17 @@ RIOT_API_KEY = os.getenv("RIOT_API_KEY")
 # This function takes in the summoner name and tagline and gets their PUUID from the Riot API
 
 def get_riot_puuid(message):
-    riot_id = message.split('#')[0]
-    tagline = message.split('#')[1]
-    url = f"{RIOT_ACCOUNT_URL}/{riot_id}/{tagline}"
+    split = message.split("#", maxsplit = 1)
+    riot_id = split[0]
+    tagline = split[1]
+    url = f"{RIOT_ACCOUNT_URL}/{riot_id.replace(" ", "%20")}/{tagline}"
+    opgg = f"https://www.op.gg/summoners/na/{riot_id.replace(" ", "%20")}-{tagline}"
     headers = {"X-Riot-Token": RIOT_API_KEY}
     response = requests.get(url, headers = headers)
 
     # Status code 200 means all is good, anything not 200 is bad
     if response.status_code == 200:
-        return response.json()["puuid"]    # returns puuid
+        return response.json()["puuid"], opgg    # returns puuid and the op.gg link
     else:
         print(f"Failed to get Riot puuid. Error code: {response.status_code}")
         return None
@@ -167,12 +173,20 @@ def get_ranked_stats(puuid):
     }'''
 
     if response.status_code == 200:
-        tier = response.json()[0]["tier"]
-        rank = response.json()[0]["rank"]
-        lp = response.json()[0]["leaguePoints"]
-        wins = response.json()[0]["wins"]
-        losses = response.json()[0]["losses"]
-        win_rate = int( 100 * ( wins / ( wins + losses )))
+        # Handles the case where a player is unranked
+        if len(response.json()) == 0:
+            tier = "Unranked"
+            rank = "Unranked"
+            lp = 0
+            win_rate = 0
+        else:
+            tier = response.json()[0]["tier"]
+            rank = response.json()[0]["rank"]
+            lp = response.json()[0]["leaguePoints"]
+            wins = response.json()[0]["wins"]
+            losses = response.json()[0]["losses"]
+            win_rate = int( 100 * ( wins / ( wins + losses )))
+
         return  tier, rank, lp, win_rate
     else:
         print(f"Failed to get ranked statistics. Error code: {response.status_code}")
@@ -207,12 +221,21 @@ def get_most_played_champions(puuid):
     }'''
 
     if response.status_code == 200:
-        return response.json()    # Probably will use the championId, championLevel, and championPoints from this query
+        champ = []
+        champlevel = []
+        champpoints = []
+        for x in range (5):
+            champ.append(LeagueChamps.get(f"{response.json()[x].get("championId")}"))
+            champlevel.append(response.json()[x].get("championLevel"))
+            champpoints.append(response.json()[x].get("championPoints"))
+        
+        
+        return champ, champlevel, champpoints
     else:
         print(f"Failed to get champion mastery. Error code: {response.status_code}")
         return None
 
-# This function get the current game version 
+# This function get the current game version, this method is required for the icon repo
 def get_patch_version():
     url = "https://ddragon.leagueoflegends.com/api/versions.json"
     response = requests.get(url)
@@ -236,8 +259,8 @@ def get_icon_data(icon_id):
         return None
 
 @client.command()
-async def stats(summoner_id, message: str):
-    puuid = get_riot_puuid(message)    #Works properly
+async def stats(ctx, *, summoner_name: str):
+    puuid, opgg = get_riot_puuid(summoner_name)    #Works properly
 
     profile_icon_id, summoner_level = get_summoner_data(puuid)
     #print(f"{profile_icon_id}/{summoner_level}")
@@ -246,11 +269,40 @@ async def stats(summoner_id, message: str):
     #print(f"{tier}/{rank}/{lp}/{win_rate}")
 
     icon_data = get_icon_data(profile_icon_id)
-    print(icon_data)
+    icon_url = f"https://ddragon.leagueoflegends.com/cdn/15.5.1/img/profileicon/{profile_icon_id}.png"
 
-    champs = get_most_played_champions(puuid)
-    '''for x in range (0, 4):
-        champ = champs[x]'''
+    champs, champlevels, champpoints = get_most_played_champions(puuid)
+    #print(f"{champs}\n{champlevels}\n{champpoints}")
+
+    '''embed = discord.Embed(
+        title = "Dog", 
+        url = "https://google.com", 
+        description = "We love dogs!", 
+        color = 0x4dff4d)
+    embed.set_author(name = "James S", url = "https://google.com")
+    await ctx.send(embed = embed)'''
+
+    embed = discord.Embed(
+        title = summoner_name.split("#")[0],
+        url = opgg,
+        description = f"{champs[0]} lover",
+        color = 0x4dff4d)
+    embed.set_thumbnail(url = icon_url)
+    embed.add_field(
+        name = "Ranked stats",
+        value = f"{tier} {rank} {lp} LP\n {win_rate}% Win Rate",
+        inline = True)
+    embed.add_field(
+        name = "Most Played Champions",
+        value = f"1. {champs[0]}, Level {champlevels[0]}, {champpoints[0]} Mastery\n" +
+                f"2. {champs[1]}, Level {champlevels[1]}, {champpoints[1]} Mastery\n" +
+                f"3. {champs[2]}, Level {champlevels[2]}, {champpoints[2]} Mastery\n" +
+                f"4. {champs[3]}, Level {champlevels[3]}, {champpoints[3]} Mastery\n" +
+                f"5. {champs[4]}, Level {champlevels[4]}, {champpoints[4]} Mastery\n",
+
+        inline = True)
+    
+    await ctx.send(embed = embed)
 
 
 '''--------------------------------------------------------------------------------------------------------------------------------
