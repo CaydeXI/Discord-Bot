@@ -30,7 +30,7 @@ portal APIs, the champions were stored by their champ ID, but when going through
 by their name. To make things a bit more confusing, some of their champions didn't follow the same naming conventions as 
 others (eg. the key for Rek'Sai would be RekSai, but the key for Kai'Sa would be Kaisa). Since these keys were inconsistent,
 I couldn't just generalize a method to take a champions name and return its key. I created a json with all of the champion 
-names and keys stored by champ ID to make obtaining this information easier.
+names and keys stored by champ ID to make obtaining this information easier. I may transfer all of these to a SQL database later.
 
 ## Quality of Life
 While it is nice to be able to view basic stats without having to leave Discord, it is made more inconvenient
