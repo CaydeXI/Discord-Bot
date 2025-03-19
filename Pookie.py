@@ -89,8 +89,38 @@ async def leave(ctx):
                                      Help command to show everyone the functions
 --------------------------------------------------------------------------------------------------------------------------------'''
 @client.command()
-async def help2(ctx):
-    await ctx.send(f"**Available function**\n+add summoner name")
+async def commands(ctx):
+    '''await ctx.send(f"**Available commands**\n" +
+                   f"+add summoner name / nickname" +
+                   f"+list" +
+                   f"+remove nickname" +
+
+                   f"+join" +  Probably not worth mentioning these two as they do not serve any real purpose
+                   f"+leave"
+                   ) '''
+    embed = discord.Embed(
+        title = "**Available commands**",
+        color = 0x6d44c7
+    )
+    embed.set_thumbnail()
+    embed.add_field(
+        name = "+add summoner name / nickname",
+        value = "Binds a nickname to an account so that it can be used instead of the full name",
+        inline = False
+    )
+    embed.add_field(
+        name = "+remove nickname",
+        value = "Unbinds the nickname from the account",
+        inline = False
+    )
+    embed.add_field(
+        name = "+list",
+        value = "Lists out all of the currently bound nicknames",
+        inline = False
+    )
+
+    await ctx.send(embed = embed)
+    
 
 '''--------------------------------------------------------------------------------------------------------------------------------
                                             Riot games stats command
@@ -367,6 +397,7 @@ async def list(ctx):
     embed = discord.Embed(
         title = "List of saved nicknames",
         color = 0x4dff4d)
+    # This link actually just links to a message that I sent in my DMs, so you'll probably have to replace this
     embed.set_thumbnail(url = "https://cdn.discordapp.com/attachments/868495107274448926/1351310309981421668/league_logo.jpg?ex=67d9e94c&is=67d897cc&hm=9f135b05c908e440e54c63154094eca2ca270749b9f9df41bb267c7fbf510fdf&")
     for nickname in Accounts:
         embed.add_field(
