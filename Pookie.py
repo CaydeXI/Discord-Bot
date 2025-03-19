@@ -8,14 +8,13 @@ import requests
 from dotenv import load_dotenv
 load_dotenv()
 
-# Imports a json that conveniently contains all of the Leageu champions with their champion ids
+# Imports a json that conveniently contains all of the League champions with their champion ids
 import json
-with open('LeagueChamps.json') as fp:
-    LeagueChamps = json.load(fp)
+with open('LeagueChamps.json') as lc:
+    LeagueChamps = json.load(lc)
 
-# Perhaps not needed for actual function of bot, just for videos
-#import requests
-#import json
+with open('StoredAccounts.json') as sa:
+    Accounts = json.load(sa)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -87,17 +86,41 @@ async def leave(ctx):
         await ctx.send("Not currently in a voice channel")
 
 '''--------------------------------------------------------------------------------------------------------------------------------
-                                                  Embeds stuff
+                                     Help command to show everyone the functions
 --------------------------------------------------------------------------------------------------------------------------------'''
 @client.command()
-async def embed(ctx):
+async def commands(ctx):
+    '''await ctx.send(f"**Available commands**\n" +
+                   f"+add summoner name / nickname" +
+                   f"+list" +
+                   f"+remove nickname" +
+
+                   f"+join" +  Probably not worth mentioning these two as they do not serve any real purpose
+                   f"+leave"
+                   ) '''
     embed = discord.Embed(
-        title = "Dog", 
-        url = "https://google.com", 
-        description = "We love dogs!", 
-        color = 0x4dff4d)
-    embed.set_author(name = "James S", url = "https://google.com")
+        title = "**Available commands**",
+        color = 0x6d44c7
+    )
+    embed.set_thumbnail()
+    embed.add_field(
+        name = "+add summoner name / nickname",
+        value = "Binds a nickname to an account so that it can be used instead of the full name",
+        inline = False
+    )
+    embed.add_field(
+        name = "+remove nickname",
+        value = "Unbinds the nickname from the account",
+        inline = False
+    )
+    embed.add_field(
+        name = "+list",
+        value = "Lists out all of the currently bound nicknames",
+        inline = False
+    )
+
     await ctx.send(embed = embed)
+    
 
 '''--------------------------------------------------------------------------------------------------------------------------------
                                             Riot games stats command
@@ -177,7 +200,7 @@ def get_ranked_stats(puuid):
         # Handles the case where a player is unranked
         if len(response.json()) == 0:
             tier = "Unranked"
-            rank = "Unranked"
+            rank = ""
             lp = 0
             win_rate = 0
         else:
@@ -276,7 +299,11 @@ def get_champ_splash(champ_id):
 
 @client.command()
 async def stats(ctx, *, summoner_name: str):
-    puuid, opgg = get_riot_puuid(summoner_name)    #Works properly
+    if Accounts.get(summoner_name):
+        puuid, opgg = get_riot_puuid(Accounts.get(summoner_name))    #Works properly
+        summoner_name = Accounts.get(summoner_name)
+    else:
+        puuid, opgg = get_riot_puuid(summoner_name) 
 
     profile_icon_id, summoner_level = get_summoner_data(puuid)
     #print(f"{profile_icon_id}/{summoner_level}")
@@ -288,19 +315,9 @@ async def stats(ctx, *, summoner_name: str):
     icon_url = f"https://ddragon.leagueoflegends.com/cdn/15.5.1/img/profileicon/{profile_icon_id}.png"
 
     champs, champlevels, champpoints, champ_url = get_most_played_champions(puuid)
-
-    
-
-    get_match_history(puuid)
     #print(f"{champs}\n{champlevels}\n{champpoints}")
 
-    '''embed = discord.Embed(
-        title = "Dog", 
-        url = "https://google.com", 
-        description = "We love dogs!", 
-        color = 0x4dff4d)
-    embed.set_author(name = "James S", url = "https://google.com")
-    await ctx.send(embed = embed)'''
+    #get_match_history(puuid)
 
     embed = discord.Embed(
         title = summoner_name.split("#")[0],
@@ -309,11 +326,10 @@ async def stats(ctx, *, summoner_name: str):
         color = 0x4dff4d)
     embed.set_thumbnail(url = icon_url)
     embed.add_field(
-        name = "Ranked stats",
-        value = f"{tier} {rank}\n {lp} LP\n {win_rate}% Win Rate",
-        inline = True)
-    embed.add_field(
-        name = "Most Played Champions",
+            name = "Ranked stats",
+            value = f"{tier} {rank}\n {lp} LP\n {win_rate}% Win Rate",
+            inline = True )
+    embed.add_field(name = "Most Played Champions",
         value = f"1. {champs[0]}, Level {champlevels[0]},\n {champpoints[0]} Mastery\n" +
                 f"2. {champs[1]}, Level {champlevels[1]},\n {champpoints[1]} Mastery\n" +
                 f"3. {champs[2]}, Level {champlevels[2]},\n {champpoints[2]} Mastery\n" +
@@ -339,7 +355,58 @@ def get_match_history(puuid):
         print(f"Failed to get match history. Error code: {response.status_code}")
         return None
 
+'''--------------------------------------------------------------------------------------------------------------------------------
+                                            List function to store names
+--------------------------------------------------------------------------------------------------------------------------------'''
+# Accounts is the name of the json file
+# format would be like +add Spellqueefs Edge#shart/darji
+@client.command()
+async def add(ctx, *, stored_name):
+    summoner_name = stored_name.split("/", maxsplit = 1)[0]
+    moniker = stored_name.split("/", maxsplit = 1)[1].strip()
+    #print(f"{summoner_name} + {moniker}")
 
+    # Creates a data entry with the key:value pair
+    data = {moniker : summoner_name}
+
+    # Checks if the account is already stored in the json file with that nickname
+    if Accounts.get(moniker):
+        await ctx.send("Account is already in the list that nickname")
+    else:
+        Accounts.update(data)
+        await ctx.send("Account added successfully")
+
+    # Saves the dict to the json file
+    with open("StoredAccounts.json", 'w') as sa:
+        json.dump(Accounts, sa, indent = 4)
+
+@client.command()
+async def remove(ctx, *, name):
+    if Accounts.get(name):
+        Accounts.pop(name)
+
+        # Saves the dict to the json file
+        with open("StoredAccounts.json", 'w') as sa:
+            json.dump(Accounts, sa, indent = 4)
+        await ctx.send("Successfully removed the nickname")
+    else:
+        await ctx.send("That nickname was not found in the database")
+
+@client.command()
+async def list(ctx):
+    embed = discord.Embed(
+        title = "List of saved nicknames",
+        color = 0x4dff4d)
+    # This link actually just links to a message that I sent in my DMs, so you'll probably have to replace this
+    embed.set_thumbnail(url = "https://cdn.discordapp.com/attachments/868495107274448926/1351310309981421668/league_logo.jpg?ex=67d9e94c&is=67d897cc&hm=9f135b05c908e440e54c63154094eca2ca270749b9f9df41bb267c7fbf510fdf&")
+    for nickname in Accounts:
+        embed.add_field(
+            name = f"{nickname} : {Accounts[nickname]}",
+            value = "",
+            inline = False
+        )
+    
+    await ctx.send(embed = embed)
 
 '''--------------------------------------------------------------------------------------------------------------------------------
                                                     Runs the pookie bot
