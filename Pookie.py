@@ -8,13 +8,28 @@ import requests
 from dotenv import load_dotenv
 load_dotenv()
 
+# Import the MySQL Database connector
+import mysql.connector
+host = os.getenv("HOST")
+user = os.getenv("USER")
+password = os.getenv("MY_SQL_PASS")
+db = mysql.connector.connect(
+    host = host,
+    user = user,
+    password = password
+)
+cursor = db.cursor()
+
+cursor.execute("USE discord_bots")
+
 # Imports a json that conveniently contains all of the League champions with their champion ids
 import json
 with open('LeagueChamps.json') as lc:
     LeagueChamps = json.load(lc)
 
-with open('StoredAccounts.json') as sa:
-    Accounts = json.load(sa)
+# Commenting out because unnecessary, but keeping around 
+'''with open('StoredAccounts.json') as sa:
+    Accounts = json.load(sa)'''
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -365,24 +380,40 @@ async def add(ctx, *, stored_name):
     summoner_name = stored_name.split("/", maxsplit = 1)[0]
     moniker = stored_name.split("/", maxsplit = 1)[1].strip()
     #print(f"{summoner_name} + {moniker}")
+    
+    try:
+        cursor.execute(f"INSERT INTO stored_accounts (nickname, summoner_name) VALUES (\"{moniker}\", \"{summoner_name}\");")
+        await ctx.send("Account added successfully")
+        db.commit()
+    except:
+        await ctx.send("Account is already in the list that nickname")
 
     # Creates a data entry with the key:value pair
-    data = {moniker : summoner_name}
+    #data = {moniker : summoner_name}
 
     # Checks if the account is already stored in the json file with that nickname
-    if Accounts.get(moniker):
+    # No longer need this code since I stored the names in a MySQL database, just keeping for later
+    '''if Accounts.get(moniker):
         await ctx.send("Account is already in the list that nickname")
     else:
         Accounts.update(data)
-        await ctx.send("Account added successfully")
+        await ctx.send("Account added successfully")'''
 
-    # Saves the dict to the json file
+    '''# Saves the dict to the json file
     with open("StoredAccounts.json", 'w') as sa:
-        json.dump(Accounts, sa, indent = 4)
+        json.dump(Accounts, sa, indent = 4)'''
 
 @client.command()
 async def remove(ctx, *, name):
-    if Accounts.get(name):
+    try:
+        cursor.execute(f"DELETE FROM stored_accounts WHERE nickname = \"{name}\";")
+        await ctx.send("Account deleted successfully")
+        db.commit()
+    except:
+        await ctx.send("No account found with that nickname")
+
+    # No longer needed since MySQL database
+    '''if Accounts.get(name):
         Accounts.pop(name)
 
         # Saves the dict to the json file
@@ -390,7 +421,7 @@ async def remove(ctx, *, name):
             json.dump(Accounts, sa, indent = 4)
         await ctx.send("Successfully removed the nickname")
     else:
-        await ctx.send("That nickname was not found in the database")
+        await ctx.send("That nickname was not found in the database")'''
 
 @client.command()
 async def list(ctx):
@@ -399,12 +430,23 @@ async def list(ctx):
         color = 0x4dff4d)
     # This link actually just links to a message that I sent in my DMs, so you'll probably have to replace this
     embed.set_thumbnail(url = "https://cdn.discordapp.com/attachments/868495107274448926/1351310309981421668/league_logo.jpg?ex=67d9e94c&is=67d897cc&hm=9f135b05c908e440e54c63154094eca2ca270749b9f9df41bb267c7fbf510fdf&")
-    for nickname in Accounts:
+    
+    cursor.execute("SELECT * FROM discord_bots.stored_accounts")
+    nicknames = cursor.fetchall()
+    for name in nicknames:
+        embed.add_field(
+            name = f"{name[0]} : {name[1]}",
+            value = "",
+            inline = False
+        )
+
+    # Commented out because no longer needed since MySQL
+    '''for nickname in Accounts:
         embed.add_field(
             name = f"{nickname} : {Accounts[nickname]}",
             value = "",
             inline = False
-        )
+        )'''
     
     await ctx.send(embed = embed)
 
